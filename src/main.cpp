@@ -9,6 +9,9 @@ int main(int argc, char *argv[])
     AppWindow appWindow;
     QObject::connect(&app, &QApplication::lastWindowClosed, &app, &QCoreApplication::quit);
 
-    appWindow.show();    
+#ifdef QT_DEBUG
+    appWindow.show();
+#endif
+
     return app.exec();
 }

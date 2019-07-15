@@ -1,8 +1,12 @@
-#ifndef WINDOWSPOSKEEPER_GLOBAL_H
-#define WINDOWSPOSKEEPER_GLOBAL_H
+#ifndef WINPOSKEEPER_GLOBAL_H
+#define WINPOSKEEPER_GLOBAL_H
 
 #include <QtCore>
 #include <QtWidgets>
+#include <qt_windows.h>
+#include "windows.h"
+#include "winuser.h"
+#include "psapi.h"
 
 #define QSL QStringLiteral
 template<class T> using QSP = QSharedPointer<T>;

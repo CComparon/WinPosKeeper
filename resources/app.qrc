@@ -2,5 +2,6 @@
     <qresource prefix="/" >
         <file>appicon.png</file>
         <file>currentab.png</file>
+        <file>aim.png</file>
     </qresource>
 </RCC>

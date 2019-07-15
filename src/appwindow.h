@@ -1,7 +1,9 @@
-#ifndef APPWINDOW_H
-#define APPWINDOW_H
+#ifndef WINPOSKEEPER_APPWINDOW_H
+#define WINPOSKEEPER_APPWINDOW_H
 
 #include "ui_appwindow.h"
+#include "utils.h"
+
 class WindowsWidget;
 
 /*************************************************************************************************************************/
@@ -10,12 +12,6 @@ class AppWindow : public QWidget
     Q_OBJECT
 
 public:
-    struct ScreenConfiguration : public QString {
-        static ScreenConfiguration current();
-        static QString toString(QScreen *screen);
-        bool isValid() const { return !isEmpty(); }
-    };
-
     AppWindow(QWidget *parent = nullptr);
 
     void log(const QString &line);
@@ -28,6 +24,8 @@ private:
     void discardWindowsWidget(const ScreenConfiguration &screenConfiguration = ScreenConfiguration());
 
 private slots:
+    void openView(bool advanced);
+
     void on_sliderAutoCapturePeriod_valueChanged(int value);
     void on_btnCaptureNow_clicked();
     void on_btnRestore_clicked();
@@ -47,6 +45,12 @@ private slots:
 
 private:
     Ui::AppWindow ui;
+    bool m_advancedView =
+#ifdef QT_DEBUG
+            true;
+#else
+            false;
+#endif
 
     QAction *m_captureAction;
     QAction *m_restoreAction;

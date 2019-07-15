@@ -1,25 +1,7 @@
 #include "appwindow.h"
+#include "utils.h"
 #include "windowswidget.h"
-
-/*************************************************************************************************************************/
-AppWindow::ScreenConfiguration AppWindow::ScreenConfiguration::current()
-{
-    QStringList tmp;
-    for (QScreen *screen : qApp->screens())
-        tmp << toString(screen);
-    ScreenConfiguration ret;
-    ret.append(tmp.join(" "));
-    return ret;
-}
-
-QString AppWindow::ScreenConfiguration::toString(QScreen *screen)
-{
-    QString ret;
-    QDebug(&ret) << screen->geometry();
-    if (screen == qApp->primaryScreen())
-        ret = QSL("PRIMARY(%1)").arg(ret.trimmed().replace("QRect", "Rect"));
-    return ret;
-}
+#include "windowpicker.h"
 
 /*************************************************************************************************************************/
 AppWindow::AppWindow(QWidget *parent)
@@ -37,9 +19,14 @@ AppWindow::AppWindow(QWidget *parent)
     m_systemTrayIcon.setIcon(qApp->windowIcon());
     m_systemTrayIcon.setToolTip(qApp->applicationName());
     QMenu *trayMenu = new QMenu(this);
+    trayMenu->addSection("Actions");
     m_captureAction = trayMenu->addAction(ui.btnCaptureNow->text(), this, &AppWindow::on_btnCaptureNow_clicked);
     m_restoreAction = trayMenu->addAction(ui.btnRestore->text(), this, &AppWindow::on_btnRestore_clicked);
     m_restoreAction->setEnabled(false);
+    trayMenu->addSection("Views");
+    trayMenu->addAction("Open simple view", this, [this]() { this->openView(false); });
+    trayMenu->addAction("Open advanced view", this, [this]() { this->openView(true); });
+    trayMenu->addSeparator();
     trayMenu->addAction("&Quit", qApp, &QCoreApplication::quit);
     m_systemTrayIcon.setContextMenu(trayMenu);
     connect(&m_systemTrayIcon, &QSystemTrayIcon::activated, this, &AppWindow::onSystemTrayActivated);
@@ -52,7 +39,7 @@ AppWindow::AppWindow(QWidget *parent)
     for (QScreen *screen : qApp->screens())
         onScreenAdded(screen);
 
-    log(QSL("Current screen configuration: %1").arg(AppWindow::ScreenConfiguration::current()));
+    log(QSL("Current screen configuration: %1").arg(ScreenConfiguration::current()));
     updateUi();
 }
 
@@ -98,6 +85,18 @@ void AppWindow::discardWindowsWidget(const ScreenConfiguration &screenConfigurat
 }
 
 /*************************************************************************************************************************/
+void AppWindow::openView(bool advanced)
+{
+    if (m_advancedView != advanced) {
+        m_advancedView = advanced;
+        updateUi();
+    }
+    showNormal();
+    QTimer::singleShot(0, this, &QWidget::raise);
+    QTimer::singleShot(0, this, &QWidget::activateWindow);
+}
+
+/*************************************************************************************************************************/
 void AppWindow::on_sliderAutoCapturePeriod_valueChanged(int value)
 {
     static const QVector<QPair<int, QString>> intervals{ { 0, "never"}, { 1, "1 second"}, { 10, "10 seconds"}, { 60, "1 minute"}, { 600, "10 minutes"}, { 3600, "1 hour"}, { 3600*4, "4 hours"} };
@@ -129,45 +128,45 @@ void AppWindow::on_windowsWidgets_tabCloseRequested(int tabIndex)
 
 void AppWindow::onSystemTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
-    if (reason == QSystemTrayIcon::DoubleClick) {
-        showNormal();
-        QTimer::singleShot(0, this, &QWidget::raise);
-        QTimer::singleShot(0, this, &QWidget::activateWindow);
-    }
+    if (reason == QSystemTrayIcon::DoubleClick)
+        openView(m_advancedView);
 }
 
 void AppWindow::onScreenAdded(QScreen *screen)
 {
-    log(QStringList { QSL("Screen added: %1").arg(AppWindow::ScreenConfiguration::toString(screen)),
-                      QSL("Screen configuration is now: %1").arg(AppWindow::ScreenConfiguration::current()) });
+    log(QStringList { QSL("Screen added: %1").arg(ScreenConfiguration::toString(screen)),
+                      QSL("Screen configuration is now: %1").arg(ScreenConfiguration::current()) });
     connect(screen, &QScreen::geometryChanged, this, &AppWindow::onScreenGeometryChanged, Qt::UniqueConnection);
     updateUi();
 }
 
 void AppWindow::onScreenRemoved(QScreen *screen)
 {
-    log(QStringList { QSL("Screen removed: %1").arg(AppWindow::ScreenConfiguration::toString(screen)),
-                      QSL("Screen configuration is now: %1").arg(AppWindow::ScreenConfiguration::current()) });
+    log(QStringList { QSL("Screen removed: %1").arg(ScreenConfiguration::toString(screen)),
+                      QSL("Screen configuration is now: %1").arg(ScreenConfiguration::current()) });
     updateUi();
 }
 
 void AppWindow::onPrimaryScreenChanged(QScreen *screen)
 {
     log(QStringList { QSL("Primary screen changed."),
-                      QSL("Screen configuration is now: %1").arg(AppWindow::ScreenConfiguration::current()) });
+                      QSL("Screen configuration is now: %1").arg(ScreenConfiguration::current()) });
     updateUi();
 }
 
 void AppWindow::onScreenGeometryChanged(const QRect &geometry)
 {
     QScreen *screen = qobject_cast<QScreen *>(sender());
-    log(QStringList { QSL("A Screen geometry changed to %1").arg(AppWindow::ScreenConfiguration::toString(screen)),
-                      QSL("Screen configuration is now: %1").arg(AppWindow::ScreenConfiguration::current()) });
+    log(QStringList { QSL("A Screen geometry changed to %1").arg(ScreenConfiguration::toString(screen)),
+                      QSL("Screen configuration is now: %1").arg(ScreenConfiguration::current()) });
     updateUi();
 }
 
 void AppWindow::updateUi()
 {
+    ui.textEditLogs->setVisible(m_advancedView);
+    ui.btnClearLogs->setVisible(m_advancedView);
+
     bool foundCurrent = false;
     const ScreenConfiguration screenConfiguration = ScreenConfiguration::current();
     for (int i=0; i<ui.windowsWidgets->count(); i++) {

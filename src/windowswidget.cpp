@@ -1,15 +1,5 @@
 #include "windowswidget.h"
 
-#ifdef Q_OS_WIN
-#   include <qt_windows.h>
-#   include "windows.h"
-#   include "winuser.h"
-#   include "psapi.h"
-#endif
-
-// SetWindowPos https://msdn.microsoft.com/en-us/library/windows/desktop/ms633545(v=vs.85).aspx
-// MoveWindow https://msdn.microsoft.com/en-us/library/windows/desktop/ms633534(v=vs.85).aspx
-
 static void setTableWidgetItemTextHelper(QTableWidgetItem *item, const QString &text, bool &changedFlag)
 {
     QFont fnt = item->font();
@@ -76,7 +66,7 @@ void WindowsWidget::WindowInfo::forget()
 }
 
 /*************************************************************************************************************************/
-WindowsWidget::WindowsWidget(const AppWindow::ScreenConfiguration &screenConfiguration, AppWindow *parent)
+WindowsWidget::WindowsWidget(const ScreenConfiguration &screenConfiguration, AppWindow *parent)
     : QWidget(parent)
     , m_appWindow(parent)
     , m_screenConfiguration(screenConfiguration)
@@ -94,49 +84,11 @@ WindowsWidget::WindowInfo *WindowsWidget::findExistingWindowInfo(const WindowInf
 
 int __stdcall WindowsWidget::enumWindowsCallback(HWND winId, LPARAM userParam)
 {
-    struct DiregardWindow {};
-
-    try {
-        wchar_t buf1[100000];
-        if (!GetWindowTextW(winId, buf1, sizeof(buf1)/sizeof(*buf1)))
-            throw DiregardWindow();
-
-        RECT rect;
-        if (!::GetWindowRect(winId, &rect))
-            throw DiregardWindow();
-
-        DWORD processId = 0;
-        DWORD ret = ::GetWindowThreadProcessId(winId, &processId);
-        if (!ret || !processId)
-            throw DiregardWindow();
-
-        HANDLE processHandle = ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, processId);
-        wchar_t buf2[100000];
-        if (!::GetModuleFileNameExW(processHandle, 0, buf2, sizeof(buf2)/sizeof(*buf2)))
-            throw DiregardWindow();
-
-        WINDOWPLACEMENT windowPlacement;
-        if (!::GetWindowPlacement(winId, &windowPlacement))
-            throw DiregardWindow();
-
-        WindowInfo windowInfo{
-            winId,
-            QString::fromWCharArray(buf2),//QFileInfo(QString::fromWCharArray(buf2)).canonicalFilePath(),
-            QDateTime::currentDateTime(),
-            windowPlacement.showCmd == SW_SHOWNORMAL ? Qt::WindowNoState :
-                    (windowPlacement.showCmd == SW_SHOWMAXIMIZED ? Qt::WindowMaximized : Qt::WindowMinimized),
-            QString::fromWCharArray(buf1),
-            QRect(QPoint(rect.left, rect.top), QPoint(rect.right, rect.bottom)),
-            !!::IsWindowVisible(winId),
-            {},
-            false
-        };
-
+    WindowInfoBase windowInfoBase;
+    if (WindowInfoBase::fromWinId(winId, &windowInfoBase)) {
+        WindowInfo windowInfo(windowInfoBase);
         WindowsWidget *windowsWidget = reinterpret_cast<WindowsWidget *>(userParam);
         windowsWidget->m_tempWindowsInfo << windowInfo;
-    }
-    catch (const DiregardWindow &) {
-        // swallow
     }
 
     return true;

@@ -1,8 +1,10 @@
-#ifndef WINDOWSWIDGET_H
-#define WINDOWSWIDGET_H
+#ifndef WINDOWS_WIDGET_H
+#define WINDOWS_WIDGET_H
 
 #include "appwindow.h"
 #include "ui_windowswidget.h"
+#include "utils.h"
+class AppWindow;
 
 /*************************************************************************************************************************/
 class WindowsWidget : public QWidget
@@ -12,17 +14,13 @@ class WindowsWidget : public QWidget
 public:
     enum WindowAction { Update, Keep, Discard };
 
-    struct WindowInfo {
-        HWND hwnd;
-        QString executableFilePath;
-        QDateTime lastSeen;
-        Qt::WindowState windowState;
-        QString windowTitle;
-        QRect geometry;
-        bool visible;
+    struct WindowInfo : public WindowInfoBase {
+        WindowInfo() {}
+        WindowInfo(const WindowInfoBase &base) : WindowInfoBase(base) {}
 
+        QDateTime lastSeen = QDateTime::currentDateTime();
         QList<QTableWidgetItem *> tableWidgetItems;
-        bool mark;
+        bool mark = false;
 
         bool sameAs(const WindowInfo &other) const;
         WindowAction recommendedAction() const;
@@ -30,9 +28,9 @@ public:
         void forget();
     };
 
-    WindowsWidget(const AppWindow::ScreenConfiguration &screenConfiguration, AppWindow *parent);
+    WindowsWidget(const ScreenConfiguration &screenConfiguration, AppWindow *parent);
 
-    AppWindow::ScreenConfiguration screenConfiguration() const { return m_screenConfiguration; }
+    ScreenConfiguration screenConfiguration() const { return m_screenConfiguration; }
 
 public slots:
     void capture();
@@ -49,7 +47,9 @@ private:
 private:
     Ui::WindowsWidget ui;
     AppWindow *const m_appWindow;
-    const AppWindow::ScreenConfiguration m_screenConfiguration;
+    const ScreenConfiguration m_screenConfiguration;
+
+    QDateTime m_lastUpdateTime = QDateTime::currentDateTime();
 
     QList<WindowInfo> m_tempWindowsInfo;
     QList<WindowInfo> m_windows;

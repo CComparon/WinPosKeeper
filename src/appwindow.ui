@@ -106,6 +106,16 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="WindowPicker" name="windowPicker" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>16</width>
+         <height>16</height>
+        </size>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -152,6 +162,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>WindowPicker</class>
+   <extends>QWidget</extends>
+   <header>windowpicker.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
